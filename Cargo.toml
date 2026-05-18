@@ -1,0 +1,8 @@
+[package]
+name = "uefitest"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+log = "0.4.29"
+uefi = { version = "0.37.0", features = ["logger", "panic_handler", "global_allocator"] }
