@@ -133,7 +133,7 @@ fn main() -> Status {
 		for index in FRAME_SEQUENCE {
 			let actual_index = usize::try_from(index - 1).unwrap();
 			let frame_data = BMP_INDEX.get(actual_index).unwrap();
-			let buffer: BMPFrame = bmp_to_buffer(*frame_data).unwrap();
+			let buffer: BMPFrame = bmp_to_buffer(frame_data).unwrap();
 
 			let buffer_w_usize: usize = buffer.w.try_into().unwrap(); // shhhh
 			let buffer_h_usize: usize = buffer.h.try_into().unwrap();
