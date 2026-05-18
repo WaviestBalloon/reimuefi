@@ -28,7 +28,7 @@ static BMP_INDEX: [&[u8]; 17] = [
 	include_bytes!("../frames/17.bmp")
 ];
 
-static SEQ: [u32; 48] = [
+static FRAME_SEQUENCE: [u32; 48] = [
 	1, 2, 1, 2, 1, 3, 1, 2, 1, 2, 1, 4, 1, 2, 1, 2, 1, 2, 1, 5, 1, 2, 1, 2, 1, 6, 1, 7, 1, 8, 1, 9, 10, 11, 10, 12, 10, 12, 13, 1, 14, 15, 16, 17, 14, 15, 17, 14
 ];
 
@@ -50,34 +50,36 @@ pub fn bmp_to_buffer(bmp_bytes: &[u8]) -> Result<BMPFrame, Box<dyn Error>> {
 	let mut buffer: vec::Vec<BltPixel> = vec![];
 	let mut temp_x_buffer: vec::Vec<BltPixel> = vec![];
 
-	let mut pointer_position: u8 = 0;
+	let mut data_start_byte_position: u8 = 0;
 	let mut pixel_position: i32 = -4; // have to shift 4 pixels for reason
 	let mut w = 0;
 	let mut h = 0;
 
 	for (offset_index, byte) in bmp_bytes.iter().enumerate() {
-		if offset_index == 10 {
-			pointer_position = *byte;
-			info!("pointer_position: {}", pointer_position);
-			continue;
+		match offset_index {
+			10 => {
+				data_start_byte_position = *byte;
+				info!("data_start_byte_position: {}", data_start_byte_position);
+			},
+			12 => {
+				let raw_w: &[u8] = bmp_bytes.get(18..22).unwrap();
+				w = u32::from_le_bytes(raw_w.try_into().unwrap());
+				info!("width resolve: w: {}, h: {}", w, h);
+			},
+			16 => {
+				let raw_h: &[u8] = bmp_bytes.get(22..26).unwrap();
+				h = u32::from_le_bytes(raw_h.try_into().unwrap());
+				info!("height resolve: w: {}, h: {}", w, h);
+			},
+			_ => { }
 		}
-		if offset_index == 12 {
-			let raw_w: &[u8] = bmp_bytes.get(18..22).unwrap();
-			w = u32::from_le_bytes(raw_w.try_into().unwrap());
-			info!("w: {}, h: {}", w, h);
-			continue;
-		}
-		if offset_index == 16 {
-			let raw_h: &[u8] = bmp_bytes.get(22..26).unwrap();
-			h = u32::from_le_bytes(raw_h.try_into().unwrap());
-			info!("w: {}, h: {}", w, h);
-			continue;
-		}
-		if offset_index >= pointer_position.into() {
-			if offset_index % 3 != 0 {
+
+		if offset_index >= data_start_byte_position.into() {
+			if offset_index % 3 != 0 { // shift from B, G, R
+				//info!("waiting for next start, offset_index: {} pixel_position: {}", offset_index, pixel_position);
 				continue;
 			}
-			
+
 			let r = byte;
 			let g = bmp_bytes.get(offset_index + 1).unwrap_or(&0);
 			let b = bmp_bytes.get(offset_index + 2).unwrap_or(&0);
@@ -98,8 +100,12 @@ pub fn bmp_to_buffer(bmp_bytes: &[u8]) -> Result<BMPFrame, Box<dyn Error>> {
 
 	if buffer_length < expected_buffer_size {
 		let buffer_space = expected_buffer_size - buffer_length;
-		for _i in 0..buffer_space {
-			buffer.push(BltPixel::new(128, 0, 255));
+		for index in 0..buffer_space {
+			if index % 2 != 0 {
+				buffer.push(BltPixel::new(255, 0, 0));
+			} else {
+				buffer.push(BltPixel::new(255, 100, 100));
+			}
 		}
 	}
 
@@ -118,15 +124,13 @@ fn main() -> Status {
 
 	println!("Please enjoy reimu!");
 
-	boot::stall(Duration::from_millis(1000));
-
 	let gop_handle = boot::get_handle_for_protocol::<GraphicsOutput>().unwrap();
 	let mut gop = boot::open_protocol_exclusive::<GraphicsOutput>(gop_handle).unwrap();
 
 	let (native_w, native_h) = gop.current_mode_info().resolution();
 
 	loop {
-		for index in SEQ {
+		for index in FRAME_SEQUENCE {
 			let actual_index = usize::try_from(index - 1).unwrap();
 			let frame_data = BMP_INDEX.get(actual_index).unwrap();
 			let buffer: BMPFrame = bmp_to_buffer(*frame_data).unwrap();
@@ -140,6 +144,7 @@ fn main() -> Status {
 				dest: ((native_w / 2) - buffer_w_usize / 2, (native_h / 2) - buffer_h_usize / 2),
 				dims: (buffer_w_usize, buffer_h_usize)
 			}).unwrap();
+
 			boot::stall(Duration::from_millis(200));
 		}
 	}

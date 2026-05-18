@@ -65,6 +65,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "reimuefi"
+version = "0.1.0"
+dependencies = [
+ "log",
+ "uefi",
+]
+
+[[package]]
 name = "syn"
 version = "2.0.117"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -119,14 +127,6 @@ checksum = "f3775e5934877acaef4b00f254f252df1e2266903c31e51455c117f4f2824eda"
 dependencies = [
  "bitflags",
  "uguid",
-]
-
-[[package]]
-name = "uefitest"
-version = "0.1.0"
-dependencies = [
- "log",
- "uefi",
 ]
 
 [[package]]
