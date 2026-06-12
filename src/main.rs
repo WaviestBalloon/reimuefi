@@ -51,9 +51,9 @@ pub fn bmp_to_buffer(bmp_bytes: &[u8]) -> Result<BMPFrame, Box<dyn Error>> {
 	let mut temp_x_buffer: vec::Vec<BltPixel> = vec![];
 
 	let mut data_start_byte_position: u8 = 0;
-	let mut pixel_position: i32 = -4; // have to shift 4 pixels for reason
-	let mut w = 0;
-	let mut h = 0;
+	let mut pixel_position: u32 = 0;
+	let mut w: u32 = 0;
+	let mut h: u32 = 0;
 
 	for (offset_index, byte) in bmp_bytes.iter().enumerate() {
 		match offset_index {
@@ -74,7 +74,7 @@ pub fn bmp_to_buffer(bmp_bytes: &[u8]) -> Result<BMPFrame, Box<dyn Error>> {
 			_ => { }
 		}
 
-		if offset_index >= data_start_byte_position.into() {
+		if data_start_byte_position != 0x0 && offset_index >= data_start_byte_position.into() {
 			if offset_index % 3 != 0 { // shift from B, G, R
 				//info!("waiting for next start, offset_index: {} pixel_position: {}", offset_index, pixel_position);
 				continue;
@@ -87,7 +87,7 @@ pub fn bmp_to_buffer(bmp_bytes: &[u8]) -> Result<BMPFrame, Box<dyn Error>> {
 			temp_x_buffer.push(BltPixel::new(clamp_u8(*b, 255), clamp_u8(*g, 255), clamp_u8(*r, 255)));
 			pixel_position += 1;
 			
-			if pixel_position == w.try_into().unwrap() {
+			if pixel_position == w {
 				temp_x_buffer.reverse();
 				buffer.append(&mut temp_x_buffer);
 				pixel_position = 0;
